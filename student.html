@@ -11,14 +11,32 @@
         .secure-badge { background-color: #4CAF50; color: white; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; }
         .container { max-width: 1300px; margin: 40px auto; padding: 0 20px; }
         .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto; }
+        
+        /* 🌟 今回追加したタイトル周りとボタンのスタイル */
+        .card-header-flex { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
         h2 { font-size: 22px; margin-top: 0; margin-bottom: 5px; color: #222; }
-        .subtitle { color: #666; font-size: 14px; margin-bottom: 25px; }
+        .subtitle { color: #666; font-size: 14px; margin-bottom: 0; }
+        .action-btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; margin-left: 10px; transition: opacity 0.2s; color: white; display: inline-flex; align-items: center; gap: 5px; }
+        .action-btn:hover { opacity: 0.8; }
+        .btn-print { background-color: #607D8B; }
+        .btn-export { background-color: #1976D2; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 1000px; }
         th, td { padding: 14px 16px; text-align: center; border-bottom: 1px solid #eaeaea; font-size: 14px; white-space: nowrap; }
         th { background-color: #f8f9fa; color: #555; font-weight: 600; }
         td:nth-child(2), td:nth-child(3) { text-align: left; }
         tr:hover { background-color: #f9f6ff; }
         .score { font-family: monospace; font-size: 15px; font-weight: bold; color: #1565C0; }
+
+        /* 🖨️ 印刷用の専用スタイル（印刷時は不要なものを消す） */
+        @media print {
+            body { background-color: white; }
+            .header, .no-print { display: none !important; }
+            .container { margin: 0; padding: 0; max-width: 100%; }
+            .card { box-shadow: none; padding: 0; }
+            table { min-width: 100%; }
+            @page { margin: 1cm; size: landscape; } /* 横向き印刷を推奨 */
+        }
     </style>
 </head>
 <body>
@@ -30,10 +48,18 @@
 
 <div class="container">
     <div class="card">
-        <h2>生徒名簿・成績一覧（5教科追加版）</h2>
-        <div class="subtitle">※このサイトは CEP（Chrome Enterprise Premium）の動的マスキング・透かし制御を検証するためのデモ用ポータルサイトです。</div>
+        <div class="card-header-flex">
+            <div>
+                <h2>生徒名簿・成績一覧（5教科追加版）</h2>
+                <div class="subtitle">※このサイトは CEP（Chrome Enterprise Premium）の動的マスキング・透かし制御を検証するためのデモ用ポータルサイトです。</div>
+            </div>
+            <div class="no-print">
+                <button onclick="window.print()" class="action-btn btn-print">🖨️ 印刷</button>
+                <button onclick="exportCSV()" class="action-btn btn-export">📥 エクスポート</button>
+            </div>
+        </div>
         
-        <table>
+        <table id="student-table">
             <thead>
                 <tr>
                     <th>生徒番号</th>
@@ -56,7 +82,6 @@
 </div>
 
 <script>
-    // アップロードされた300名分のCSV基礎データ
     const rawCSV = `10101,1年A組,高橋 太郎
 10201,1年A組,佐藤 優花
 10301,1年A組,鈴木 優花
@@ -360,16 +385,14 @@
 
     const tbody = document.getElementById('student-table-body');
     
-    // CEP検証用：リロードしても毎回同じ点数・生年月日を出すための計算機能
     function getSeededRandom(seed) {
         let x = Math.sin(seed) * 10000;
         return x - Math.floor(x);
     }
 
-    // 女性らしい名前のキーワード（CSVで全員「男」になっていたのを自動修正します）
     const femaleNames = ["優花", "彩乃", "七海", "結衣", "葵", "さくら", "凛", "陽菜", "花子", "美咲", "恵"];
-
     const lines = rawCSV.trim().split('\n');
+    
     lines.forEach(function(line) {
         const parts = line.split(',');
         if (parts.length < 3) return;
@@ -377,13 +400,11 @@
         const id = parts[0].trim();
         const className = parts[1].trim();
         const name = parts[2].trim();
-        const seed = parseInt(id, 10); // 生徒番号を計算の基準にします
+        const seed = parseInt(id, 10);
 
-        // 性別の自動判定
         const isFemale = femaleNames.some(f => name.includes(f));
         const gender = isFemale ? "女" : "男";
 
-        // 西暦の生年月日を生成 (学年に応じて2008年〜2010年を割り当てます)
         let baseYear = 2010;
         if (className.includes("2年")) baseYear = 2009;
         if (className.includes("3年")) baseYear = 2008;
@@ -391,14 +412,12 @@
         const day = String(Math.floor(getSeededRandom(seed + 2) * 28) + 1).padStart(2, '0');
         const birth = baseYear + "/" + month + "/" + day;
 
-        // 5教科のダミー点数を自動生成 (40〜100点)
         const jp = Math.floor(getSeededRandom(seed + 3) * 61) + 40;
         const ma = Math.floor(getSeededRandom(seed + 4) * 61) + 40;
         const sc = Math.floor(getSeededRandom(seed + 5) * 61) + 40;
         const so = Math.floor(getSeededRandom(seed + 6) * 61) + 40;
         const en = Math.floor(getSeededRandom(seed + 7) * 61) + 40;
 
-        // 表の行（HTML）を作成して追加
         const row = document.createElement('tr');
         row.innerHTML = 
             '<td>' + id + '</td>' +
@@ -414,6 +433,37 @@
             '<td>2026/04/01</td>';
         tbody.appendChild(row);
     });
+
+    // 📥 テーブルデータをCSVとしてエクスポートする機能
+    function exportCSV() {
+        const table = document.getElementById("student-table");
+        // Excelで開いたときの文字化けを防ぐBOM（Byte Order Mark）を追加
+        let csvContent = "\uFEFF";
+        
+        // テーブルのすべての行（tr）を取得して処理
+        for (let row of table.rows) {
+            let rowData = [];
+            // 行の中のすべてのセル（th, td）を取得して処理
+            for (let cell of row.cells) {
+                // セルの中身を取得し、改行やカンマが含まれていても崩れないように "" で囲む
+                let text = cell.innerText.replace(/"/g, '""');
+                rowData.push('"' + text + '"');
+            }
+            // カンマ区切りで結合し、行の最後に改行を追加
+            csvContent += rowData.join(",") + "\r\n";
+        }
+
+        // CSVファイルを生成してダウンロードさせる処理
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "生徒名簿_成績一覧.csv"); // 保存されるファイル名
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 </script>
 
 </body>

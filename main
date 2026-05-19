@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School System Portal</title>
+    <style>
+        body { font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; color: #333; }
+        .header { background-color: #673AB7; color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+        .secure-badge { background-color: #4CAF50; color: white; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+        .container { max-width: 1300px; margin: 40px auto; padding: 0 20px; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto; }
+        h2 { font-size: 22px; margin-top: 0; margin-bottom: 5px; color: #222; }
+        .subtitle { color: #666; font-size: 14px; margin-bottom: 25px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 900px; }
+        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #eaeaea; font-size: 14px; white-space: nowrap; }
+        th { background-color: #f8f9fa; color: #555; font-weight: 600; }
+        tr:hover { background-color: #f9f6ff; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🏫 School System Portal</h1>
+    <div class="secure-badge">● Secure Admin Access</div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h2>生徒名簿一覧（学年・学級編成確定版）</h2>
+        <div class="subtitle">※このサイトは CEP（Chrome Enterprise Premium）の動的マスキング・透かし制御を検証するためのデモ用ポータルサイトです。</div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>生徒番号</th>
+                    <th>現在のクラス</th>
+                    <th>氏名</th>
+                    <th>性別</th>
+                    <th>生年月日</th>
+                    <th>入学日</th>
+                </tr>
+            </thead>
+            <tbody id="student-table-body">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // CEP検証用ダミーデータ（マスキングが反応しやすい生年月日などを入れています）
+    const studentData = [
+        { id: "S23001", class: "1年A組", name: "佐藤 健一", gender: "男", birth: "平成19年05月12日", join: "2023/04/01" },
+        { id: "S23002", class: "1年A組", name: "田中 美咲", gender: "女", birth: "平成19年11月23日", join: "2023/04/01" },
+        { id: "S23003", class: "1年B組", name: "鈴木 一郎", gender: "男", birth: "平成19年08月05日", join: "2023/04/01" },
+        { id: "S23004", class: "1年B組", name: "高橋 結衣", gender: "女", birth: "平成20年02月14日", join: "2023/04/01" },
+        { id: "S23005", class: "2年A組", name: "伊藤 博", gender: "男", birth: "平成18年04月30日", join: "2023/04/01" },
+        { id: "S23006", class: "2年B組", name: "渡辺 直美", gender: "女", birth: "平成18年09月18日", join: "2023/04/01" },
+        { id: "S23007", class: "3年A組", name: "山本 裕太", gender: "男", birth: "平成17年07月11日", join: "2023/04/01" },
+        { id: "S23008", class: "3年A組", name: "中村 恵", gender: "女", birth: "平成17年12月03日", join: "2023/04/01" }
+    ];
+
+    const tbody = document.getElementById('student-table-body');
+    studentData.forEach(function(student) {
+        const row = document.createElement('tr');
+        row.innerHTML = 
+            '<td>' + student.id + '</td>' +
+            '<td>' + student.class + '</td>' +
+            '<td><b>' + student.name + '</b></td>' +
+            '<td>' + student.gender + '</td>' +
+            '<td>' + student.birth + '</td>' +
+            '<td>' + student.join + '</td>';
+        tbody.appendChild(row);
+    });
+</script>
+
+</body>
+</html>

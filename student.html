@@ -12,7 +12,6 @@
         .container { max-width: 1300px; margin: 40px auto; padding: 0 20px; }
         .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto; }
         
-        /* 🌟 今回追加したタイトル周りとボタンのスタイル */
         .card-header-flex { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
         h2 { font-size: 22px; margin-top: 0; margin-bottom: 5px; color: #222; }
         .subtitle { color: #666; font-size: 14px; margin-bottom: 0; }
@@ -27,15 +26,15 @@
         td:nth-child(2), td:nth-child(3) { text-align: left; }
         tr:hover { background-color: #f9f6ff; }
         .score { font-family: monospace; font-size: 15px; font-weight: bold; color: #1565C0; }
+        .hensachi { font-family: monospace; font-size: 16px; font-weight: bold; color: #D32F2F; background-color: #ffebee; border-radius: 4px; padding: 4px 8px; }
 
-        /* 🖨️ 印刷用の専用スタイル（印刷時は不要なものを消す） */
         @media print {
             body { background-color: white; }
             .header, .no-print { display: none !important; }
             .container { margin: 0; padding: 0; max-width: 100%; }
             .card { box-shadow: none; padding: 0; }
             table { min-width: 100%; }
-            @page { margin: 1cm; size: landscape; } /* 横向き印刷を推奨 */
+            @page { margin: 1cm; size: landscape; }
         }
     </style>
 </head>
@@ -50,7 +49,7 @@
     <div class="card">
         <div class="card-header-flex">
             <div>
-                <h2>生徒名簿・成績一覧</h2>
+                <h2>生徒名簿・成績一覧（偏差値自動計算版）</h2>
                 <div class="subtitle">※このサイトは CEP（Chrome Enterprise Premium）の動的マスキング・透かし制御を検証するためのデモ用ポータルサイトです。</div>
             </div>
             <div class="no-print">
@@ -72,7 +71,7 @@
                     <th>理科</th>
                     <th>社会</th>
                     <th>英語</th>
-                    <th>入学日</th>
+                    <th>偏差値(5教科)</th>
                 </tr>
             </thead>
             <tbody id="student-table-body">
@@ -393,6 +392,10 @@
     const femaleNames = ["優花", "彩乃", "七海", "結衣", "葵", "さくら", "凛", "陽菜", "花子", "美咲", "恵"];
     const lines = rawCSV.trim().split('\n');
     
+    // 📊 ステップ1：全員の点数を生成して配列に保存し、合計点の平均を出す
+    let students = [];
+    let sumOfAllTotals = 0;
+
     lines.forEach(function(line) {
         const parts = line.split(',');
         if (parts.length < 3) return;
@@ -417,48 +420,61 @@
         const sc = Math.floor(getSeededRandom(seed + 5) * 61) + 40;
         const so = Math.floor(getSeededRandom(seed + 6) * 61) + 40;
         const en = Math.floor(getSeededRandom(seed + 7) * 61) + 40;
+        
+        const total = jp + ma + sc + so + en;
+        sumOfAllTotals += total;
+
+        students.push({ id, className, name, gender, birth, jp, ma, sc, so, en, total });
+    });
+
+    // 📊 ステップ2：標準偏差（データのばらつき具合）を計算する
+    const averageTotal = sumOfAllTotals / students.length;
+    let sumSquaredDiff = 0;
+    students.forEach(s => {
+        sumSquaredDiff += Math.pow(s.total - averageTotal, 2);
+    });
+    const standardDeviation = Math.sqrt(sumSquaredDiff / students.length);
+
+    // 📊 ステップ3：一人ずつの偏差値を割り出して画面に表示する
+    students.forEach(s => {
+        // 偏差値の計算式：(個人の得点 - 平均点) ÷ 標準偏差 × 10 + 50
+        let hensachi = 50;
+        if (standardDeviation > 0) {
+            hensachi = ((s.total - averageTotal) / standardDeviation) * 10 + 50;
+        }
 
         const row = document.createElement('tr');
         row.innerHTML = 
-            '<td>' + id + '</td>' +
-            '<td>' + className + '</td>' +
-            '<td><b>' + name + '</b></td>' +
-            '<td>' + gender + '</td>' +
-            '<td>' + birth + '</td>' +
-            '<td class="score">' + jp + '</td>' +
-            '<td class="score">' + ma + '</td>' +
-            '<td class="score">' + sc + '</td>' +
-            '<td class="score">' + so + '</td>' +
-            '<td class="score">' + en + '</td>' +
-            '<td>2026/04/01</td>';
+            '<td>' + s.id + '</td>' +
+            '<td>' + s.className + '</td>' +
+            '<td><b>' + s.name + '</b></td>' +
+            '<td>' + s.gender + '</td>' +
+            '<td>' + s.birth + '</td>' +
+            '<td class="score">' + s.jp + '</td>' +
+            '<td class="score">' + s.ma + '</td>' +
+            '<td class="score">' + s.sc + '</td>' +
+            '<td class="score">' + s.so + '</td>' +
+            '<td class="score">' + s.en + '</td>' +
+            '<td><span class="hensachi">' + hensachi.toFixed(1) + '</span></td>';
         tbody.appendChild(row);
     });
 
-    // 📥 テーブルデータをCSVとしてエクスポートする機能
     function exportCSV() {
         const table = document.getElementById("student-table");
-        // Excelで開いたときの文字化けを防ぐBOM（Byte Order Mark）を追加
         let csvContent = "\uFEFF";
-        
-        // テーブルのすべての行（tr）を取得して処理
         for (let row of table.rows) {
             let rowData = [];
-            // 行の中のすべてのセル（th, td）を取得して処理
             for (let cell of row.cells) {
-                // セルの中身を取得し、改行やカンマが含まれていても崩れないように "" で囲む
                 let text = cell.innerText.replace(/"/g, '""');
                 rowData.push('"' + text + '"');
             }
-            // カンマ区切りで結合し、行の最後に改行を追加
             csvContent += rowData.join(",") + "\r\n";
         }
-
-        // CSVファイルを生成してダウンロードさせる処理
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", "生徒名簿_成績一覧.csv"); // 保存されるファイル名
+        link.setAttribute("download", "生徒名簿_成績一覧.csv");
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
